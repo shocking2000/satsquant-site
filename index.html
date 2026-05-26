@@ -29,6 +29,8 @@
   --red-a:   rgba(255,69,69,.10);
   --blue:    #4d9fff;
   --blue-a:  rgba(77,159,255,.10);
+  --tether:  #26a17b;
+  --tether-a: rgba(38,161,123,.10);
   --mono:    'IBM Plex Mono', monospace;
   --sans:    'IBM Plex Sans', sans-serif;
   --r:       6px;
@@ -53,6 +55,8 @@
   --red-a:   rgba(204,31,31,.08);
   --blue:    #1758b0;
   --blue-a:  rgba(23,88,176,.08);
+  --tether:  #1f8763;
+  --tether-a: rgba(31,135,99,.08);
 }
 
 body {
@@ -634,8 +638,8 @@ function render(d, stateRow, relRow) {
       <div class="regime-badge ${rClass(d.regime)}">${rLabel(d.regime)}</div>
     </div>
 
-    <!-- KPIs: SALDO P&L POSICAO PERFORMANCE -->
-    <div class="g4">
+    <!-- KPIs: SALDO P&L PERFORMANCE -->
+    <div class="g3">
       <div class="card ${pnl >= 0 ? 'c-green' : 'c-red'}">
         <div class="cl">Saldo total</div>
         <div class="cv">${f$(d.saldo_total)}</div>
@@ -645,11 +649,6 @@ function render(d, stateRow, relRow) {
         <div class="cl">P&amp;L</div>
         <div class="cv ${pnl >= 0 ? 'up' : 'dn'}">${fPnl(pnl)}</div>
         <div class="cs ${pnl >= 0 ? 'up' : 'dn'}">${fPnlPct(pnl, 10000)}</div>
-      </div>
-      <div class="card ${pos === 'BTC' ? 'c-gold' : ''}">
-        <div class="cl">Posicao</div>
-        <div class="cv ${pos === 'BTC' ? 'go' : ''}">${pos}</div>
-        <div class="cs">${pos === 'BTC' ? Number(d.saldo_btc).toFixed(6) + ' BTC' : f$(d.saldo_usdt) + ' USDT'}</div>
       </div>
       <div class="card ${wr >= 50 ? 'c-green' : wr > 0 ? 'c-red' : ''}">
         <div class="cl">Performance</div>
@@ -680,19 +679,25 @@ function render(d, stateRow, relRow) {
     <!-- POSICAO ATUAL -->
     <div class="sec">Posicao atual</div>
     <div class="pos-panel">
-      <div class="pos-tag ${pos === 'BTC' ? 'go' : ''}">${pos}</div>
+      <div class="pos-tag" style="color:${pos === 'BTC' ? 'var(--gold)' : 'var(--tether)'}">
+        <span style="font-size:1.2em">${pos === 'BTC' ? '&#x20BF;' : '&#x20AE;'}</span> ${pos}
+      </div>
       <div class="pos-details">
         <div>
           <div class="pit-lbl">Saldo USDT</div>
-          <div class="pit-val">${f$(d.saldo_usdt)}</div>
+          <div class="pit-val" style="color:${Number(d.saldo_usdt) > 0 ? 'var(--tether)' : ''}">
+            <span style="opacity:.85">&#x20AE;</span> ${f$(d.saldo_usdt)}
+          </div>
         </div>
         <div>
           <div class="pit-lbl">Saldo BTC</div>
-          <div class="pit-val ${pos === 'BTC' ? 'go' : ''}">${Number(d.saldo_btc).toFixed(8)}</div>
+          <div class="pit-val" style="color:${Number(d.saldo_btc) > 0 ? 'var(--gold)' : ''}">
+            <span style="opacity:.85">&#x20BF;</span> ${Number(d.saldo_btc).toFixed(8)}
+          </div>
         </div>
         <div>
           <div class="pit-lbl">Preco de entrada</div>
-          <div class="pit-val ${pos === 'BTC' ? 'go' : ''}">${pos === 'BTC' && d.preco_compra ? f$(d.preco_compra) : '—'}</div>
+          <div class="pit-val" style="color:${pos === 'BTC' ? 'var(--gold)' : ''}">${pos === 'BTC' && d.preco_compra ? f$(d.preco_compra) : '—'}</div>
         </div>
         <div>
           <div class="pit-lbl">Win rate</div>
