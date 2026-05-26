@@ -1,0 +1,15 @@
+# Arquivos do bot — NUNCA versionar no repo público satsquant-site
+bot.py
+dados.json
+CLAUDE.md
+
+# Logs e cache
+*.log
+output.log
+error.log
+__pycache__/
+*.pyc
+*.pyo
+
+# Config local Claude Code
+.claude/
