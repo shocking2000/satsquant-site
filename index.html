@@ -396,8 +396,8 @@ const f$   = v => '$' + Number(v).toLocaleString('en-US', { minimumFractionDigit
 const fPnl = v => { const n = Number(v); return (n >= 0 ? '+' : '') + f$(n); };
 const fPct = v => { const n = Number(v); return (n >= 0 ? '+' : '') + n.toFixed(4) + '%'; };
 const fPnlPct = (pnl, cap) => { const p = Number(pnl) / cap * 100; return (p >= 0 ? '+' : '') + p.toFixed(2) + '%'; };
-const rClass  = r => ({ alta: 'r-alta', queda: 'r-queda', oscilacao: 'r-oscilacao' }[r] || 'r-lateral');
-const rLabel  = r => ({ alta: '&#x2191; MODO ALTA', queda: '&#x2193; MODO QUEDA', oscilacao: '&#x2194; OSCILACAO' }[r] || '&#9670; LATERAL');
+const rClass  = r => ({ trend_btc: 'r-alta', trend_usdt: 'r-queda', alta: 'r-alta', queda: 'r-queda', oscilacao: 'r-oscilacao' }[r] || 'r-lateral');
+const rLabel  = r => ({ trend_btc: '&#x2191; TREND UP &middot; LONG BTC', trend_usdt: '&#x2193; TREND DOWN &middot; CASH', alta: '&#x2191; MODO ALTA', queda: '&#x2193; MODO QUEDA', oscilacao: '&#x2194; OSCILACAO' }[r] || '&#9670; LATERAL');
 const fgEmoji = v => v < 25 ? '&#128561;' : v < 45 ? '&#128552;' : v < 55 ? '&#128528;' : v < 75 ? '&#128522;' : '&#129297;';
 const fgColor = v => v < 30 ? 'var(--green)' : v > 70 ? 'var(--red)' : 'var(--gold)';
 const safe    = v => (v != null && v !== '' && !isNaN(Number(v))) ? Number(v) : null;
@@ -593,29 +593,19 @@ function render(d, stateRow, relRow) {
   const ts     = new Date(d.timestamp).toLocaleTimeString('pt-BR');
 
   const pj = stateRow && stateRow.pesos_json ? stateRow.pesos_json : null;
+  const estrategia = (pj && pj.estrategia) || 'TREND EMA21d';
+  const versao     = (pj && pj.version)    || '4.0.0';
 
-  const decHtml = buy > sell
-    ? `<span class="up">&#x25B2; COMPRAR BTC</span>`
-    : sell > buy
-      ? `<span class="dn">&#x25BC; SAIR / AGUARDAR</span>`
-      : `<span style="color:var(--muted)">&#9670; AGUARDANDO</span>`;
+  // distância % do preço à EMA21d (positivo = trend UP, negativo = trend DOWN)
+  // a v4.0 envia em score_buy (se positivo) ou score_sell (se negativo)
+  const distEma = buy > 0 ? buy : sell > 0 ? -sell : 0;
+  const trendUp = distEma > 0;
+  const trendBarPct = Math.min(100, Math.abs(distEma) * 10);  // visual: 10% = barra cheia
 
-  const barColor = buy > sell ? 'var(--green)' : buy < sell ? 'var(--red)' : 'var(--dim)';
-
-  const stopTpHtml = (pos === 'BTC' && d.stop_price && d.target_price) ? `
-    <div class="sec">Protecao da posicao</div>
-    <div class="g2">
-      <div class="card c-red">
-        <div class="cl">Stop Loss</div>
-        <div class="cv dn">${f$(d.stop_price)}</div>
-        <div class="cs">saida de emergencia</div>
-      </div>
-      <div class="card c-green">
-        <div class="cl">Take Profit</div>
-        <div class="cv up">${f$(d.target_price)}</div>
-        <div class="cs">alvo de saida</div>
-      </div>
-    </div>` : '';
+  const decHtml = trendUp
+    ? `<span class="up">&#x25B2; LONG BTC</span>`
+    : `<span class="dn">&#x25BC; CASH (USDT)</span>`;
+  const barColor = trendUp ? 'var(--green)' : 'var(--red)';
 
   let tradeHtml;
   if (d.ultimo_trade) {
@@ -668,50 +658,24 @@ function render(d, stateRow, relRow) {
       </div>
     </div>
 
-    <!-- SCORE -->
+    <!-- ESTRATEGIA TREND EMA21d -->
     <div class="score-card">
       <div class="score-header">
-        <span class="score-title">Score ponderado &middot; decisao atual do bot</span>
+        <span class="score-title">Estrategia: ${estrategia} &middot; v${versao}</span>
         <span class="score-decision">${decHtml}</span>
       </div>
       <div class="score-row">
-        <span class="score-lbl up">B ${buy.toFixed(1)}</span>
+        <span class="score-lbl ${trendUp ? 'up' : 'dn'}">${distEma >= 0 ? '+' : ''}${distEma.toFixed(2)}%</span>
         <div class="bar-bg">
-          <div class="bar-fill" style="width:${buyPct}%;background:${barColor}"></div>
+          <div class="bar-fill" style="width:${trendBarPct}%;background:${barColor}"></div>
         </div>
-        <span class="score-lbl dn" style="text-align:right">S ${sell.toFixed(1)}</span>
+        <span class="score-lbl" style="text-align:right;color:var(--muted)">EMA 21d</span>
       </div>
       <div class="score-meta">
-        <span>compra (min 5.0)</span>
-        <span>venda (min 3.0)</span>
+        <span>preco vs EMA21d (close diario)</span>
+        <span>regra: acima &rarr; LONG &middot; abaixo &rarr; CASH</span>
       </div>
     </div>
-
-    <!-- DADOS EXTERNOS CLASSICOS -->
-    <div class="sec">Dados externos</div>
-    <div class="g3">
-      <div class="card">
-        <div class="cl">Fear &amp; Greed ${fgEmoji(fg)}</div>
-        <div class="cv" style="color:${fgColor(fg)}">${fg}</div>
-        <div class="cs">${d.fear_greed_label || '—'} &middot; Alternative.me</div>
-      </div>
-      <div class="card">
-        <div class="cl">Funding Rate</div>
-        <div class="cv" style="color:${fr > 0.05 ? 'var(--red)' : fr < -0.01 ? 'var(--green)' : 'var(--muted)'}">${fPct(fr)}</div>
-        <div class="cs">${fr > 0.05 ? 'sobrecomprado' : fr < -0.01 ? 'sobrevendido' : 'neutro'} &middot; a cada 8h</div>
-      </div>
-      <div class="card">
-        <div class="cl">MVRV (on-chain)</div>
-        <div class="cv ${mvrv !== null ? (mvrv < 1 ? 'up' : mvrv > 3.5 ? 'dn' : '') : ''}">${mvrv !== null ? mvrv.toFixed(2) : '—'}</div>
-        <div class="cs">${mvrv !== null ? (mvrv < 1 ? 'subavaliado' : mvrv > 3.5 ? 'sobrevalorizado' : 'zona neutra') : 'sem dados &middot; CoinMetrics'}</div>
-      </div>
-    </div>
-
-    <!-- MARKET CONTEXT (derivativos + on-chain) -->
-    ${buildContextoHtml(pj)}
-
-    <!-- CICLO HISTORICO (semanal) -->
-    ${buildCicloHtml(pj)}
 
     <!-- POSICAO ATUAL -->
     <div class="sec">Posicao atual</div>
@@ -719,20 +683,16 @@ function render(d, stateRow, relRow) {
       <div class="pos-tag ${pos === 'BTC' ? 'go' : ''}">${pos}</div>
       <div class="pos-details">
         <div>
-          <div class="pit-lbl">Entrada</div>
+          <div class="pit-lbl">Saldo USDT</div>
+          <div class="pit-val">${f$(d.saldo_usdt)}</div>
+        </div>
+        <div>
+          <div class="pit-lbl">Saldo BTC</div>
+          <div class="pit-val ${pos === 'BTC' ? 'go' : ''}">${Number(d.saldo_btc).toFixed(8)}</div>
+        </div>
+        <div>
+          <div class="pit-lbl">Preco de entrada</div>
           <div class="pit-val ${pos === 'BTC' ? 'go' : ''}">${pos === 'BTC' && d.preco_compra ? f$(d.preco_compra) : '—'}</div>
-        </div>
-        <div>
-          <div class="pit-lbl">Stop</div>
-          <div class="pit-val dn">${d.stop_price ? f$(d.stop_price) : '—'}</div>
-        </div>
-        <div>
-          <div class="pit-lbl">Alvo</div>
-          <div class="pit-val up">${d.target_price ? f$(d.target_price) : '—'}</div>
-        </div>
-        <div>
-          <div class="pit-lbl">Losses seguidos</div>
-          <div class="pit-val ${d.losses_seguidos >= 2 ? 'dn' : ''}">${d.losses_seguidos}${d.losses_seguidos >= 2 ? ' &middot; pausa ativa' : ''}</div>
         </div>
         <div>
           <div class="pit-lbl">Win rate</div>
@@ -741,20 +701,12 @@ function render(d, stateRow, relRow) {
       </div>
     </div>
 
-    ${stopTpHtml}
-
     <!-- ULTIMO TRADE -->
     <div class="sec">Ultimo trade</div>
     <div class="trade-panel">
       <div class="trade-lbl">Ultimo trade executado</div>
       ${tradeHtml}
     </div>
-
-    <!-- PESOS DOS INDICADORES -->
-    ${buildPesosHtml(pj)}
-
-    <!-- RELATORIO AUTO-GERADO -->
-    ${buildRelatorioHtml(relRow)}
 
   `;
 
