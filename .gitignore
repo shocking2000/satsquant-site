@@ -2,6 +2,7 @@
 bot.py
 dados.json
 CLAUDE.md
+local_config.py
 
 # Logs e cache
 *.log
